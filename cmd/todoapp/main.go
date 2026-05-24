@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	logger "github.com/yunishuseynov99/go_todolist/internal/core/logger"
+	core_http_middleware "github.com/yunishuseynov99/go_todolist/internal/core/transport/http/middleware"
 	core_http_server "github.com/yunishuseynov99/go_todolist/internal/core/transport/http/server"
 	users_transport_http "github.com/yunishuseynov99/go_todolist/internal/features/users/transport/http"
 	"go.uber.org/zap"
@@ -36,7 +37,12 @@ func main() {
 	apiVersionRouter.RegisterRoutes(usersRoutes...)
 	httpServer := core_http_server.NewHTTPServer(
 		core_http_server.NewConfigMust(),
-		newLogger)
+		newLogger,
+		core_http_middleware.RequestId(),
+		core_http_middleware.Logger(newLogger),
+		core_http_middleware.Panic(),
+		core_http_middleware.Trace(),
+	)
 
 	httpServer.RegisterAPIRouters(apiVersionRouter)
 
