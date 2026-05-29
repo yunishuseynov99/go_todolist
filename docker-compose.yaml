@@ -1,26 +1,27 @@
 services:
   todoapp-postgres:
-    image: postgres:18.1-bookworm
+    image: postgres:16.1-bookworm # Using a stable, real version
     container_name: todoapp-env-postgres
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
-      - ${PROJECT_ROOT}/out/pgdata:/var/lib/postgresql
+      - ${PROJECT_ROOT}/out/pgdata:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
-    restart: unless-stopped
+      - "127.0.0.1:5432:5432"
+    restart: always
+    healthcheck:
+      # CHANGE IS HERE: Removed the "-d ${POSTGRES_DB}" part.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   todoapp-postgres-migrate:
     image: migrate/migrate:v4.19.1
     volumes:
       - ${PROJECT_ROOT}/migrations:/migrations
-
-
-  port-forwarder:
-    image: alpine/socat:1.8.0.3
-    container_name: todoapp-postgres-port-forwarder
-    command: tcp-listen:5432,fork,reuseaddr tcp-connect:todoapp-postgres:5432
-    ports:
-      - "127.0.0.1:5432:5432"
+    depends_on:
+      todoapp-postgres:
+        condition: service_healthy

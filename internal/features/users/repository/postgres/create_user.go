@@ -6,7 +6,7 @@ import (
 	"github.com/yunishuseynov99/go_todolist/internal/core/domain"
 )
 
-func (r *UsersRepository) createUser(
+func (r *UsersRepository) CreateUser(
 	ctx context.Context,
 	user domain.User,
 ) (domain.User, error) {

@@ -7,12 +7,14 @@ env-up:
 	@docker compose --env-file .env up -d todoapp-postgres
 
 env-down:
-	@docker compose --env-file .env down todoapp-postgres
+	# CHANGE IS HERE: Added --remove-orphans
+	@docker compose --env-file .env down --remove-orphans
 
 env-cleanup:
 	@read -p "This will delete postgres data. Type Y to continue: " ans; \
 	if [ "$$ans" = "Y" ]; then \
-		docker compose --env-file .env down todoapp-postgres && \
+		# CHANGE IS HERE: Added --remove-orphans
+		docker compose --env-file .env down --remove-orphans && \
 		rm -rf out/pgdata && \
 		echo "env cleaned"; \
 	else \
@@ -30,11 +32,7 @@ migrate-create:
 		-dir /migrations \
 		-seq "$(seq)"
 
-env-port-forward:
-	@docker compose up -d port-forwarder
-
-env-port-close:
-	@docker compose down port-forwarder
+# REMOVED env-port-forward and env-port-close targets
 
 migrate-up:
 	@make migrate-action action=up
@@ -54,5 +52,6 @@ migrate-action:
 
 todoapp-run:
 	@export LOGGER_FOLDER=${PROJECT_ROOT}/out/logs && \
+	export POSTGRES_HOST=localhost && \
 	go mod tidy && \
 	go run cmd/todoapp/main.go
