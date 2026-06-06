@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	logger "github.com/yunishuseynov99/go_todolist/internal/core/logger"
-	core_postgres_pool "github.com/yunishuseynov99/go_todolist/internal/core/repository/postgres/pool"
+	"github.com/yunishuseynov99/go_todolist/internal/core/repository/postgres/pool/pgx"
 	core_http_middleware "github.com/yunishuseynov99/go_todolist/internal/core/transport/http/middleware"
 	core_http_server "github.com/yunishuseynov99/go_todolist/internal/core/transport/http/server"
 	users_postgres_repository "github.com/yunishuseynov99/go_todolist/internal/features/users/repository/postgres"
@@ -31,9 +31,9 @@ func main() {
 
 	newLogger.Debug("initializing postgres connection pool")
 
-	pool, err := core_postgres_pool.NewConnectionPool(
+	pool, err := core_pgx_pool.NewConnectionPool(
 		ctx,
-		core_postgres_pool.NewConfigMust())
+		core_pgx_pool.NewConfigMust())
 	if err != nil {
 		newLogger.Fatal("Failed to initialize postgres connection pool:", zap.Error(err))
 	}
@@ -52,14 +52,19 @@ func main() {
 		newLogger,
 		core_http_middleware.RequestId(),
 		core_http_middleware.Logger(newLogger),
-		core_http_middleware.Panic(),
 		core_http_middleware.Trace(),
+		core_http_middleware.Panic(),
 	)
 
-	apiVersionRouter := core_http_server.NewAPIVersionRouter(core_http_server.ApiVersion1)
-	apiVersionRouter.RegisterRoutes(usersTransportHttp.Routes()...)
+	apiVersionRouterV1 := core_http_server.NewAPIVersionRouter(core_http_server.ApiVersion1)
+	apiVersionRouterV1.RegisterRoutes(usersTransportHttp.Routes()...)
 
-	httpServer.RegisterAPIRouters(apiVersionRouter)
+	//apiVersionRouterV2 := core_http_server.NewAPIVersionRouter(core_http_server.ApiVersion2,
+	//	core_http_middleware.Dummy("api v2 middleware"),
+	//)
+	//apiVersionRouterV2.RegisterRoutes(usersTransportHttp.Routes()...)
+
+	httpServer.RegisterAPIRouters(apiVersionRouterV1 /*apiVersionRouterV2*/)
 
 	if err := httpServer.Run(ctx); err != nil {
 		newLogger.Error("HTTP server run error", zap.Error(err))

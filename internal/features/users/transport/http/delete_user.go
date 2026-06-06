@@ -2,8 +2,8 @@ package users_transport_http
 
 import (
 	core_logger "github.com/yunishuseynov99/go_todolist/internal/core/logger"
+	"github.com/yunishuseynov99/go_todolist/internal/core/transport/http/request"
 	core_http_response "github.com/yunishuseynov99/go_todolist/internal/core/transport/http/response"
-	core_http_utils "github.com/yunishuseynov99/go_todolist/internal/features/users/transport/utils"
 	"net/http"
 )
 
@@ -12,7 +12,7 @@ func (h *UsersHTTPHandler) DeleteUser(rw http.ResponseWriter, r *http.Request) {
 	log := core_logger.FromContext(ctx)
 	responseHandler := core_http_response.NewHTTPResponseHandler(log, rw)
 
-	userID, err := core_http_utils.GetIntPathValue(r, "id")
+	userID, err := core_http_request.GetIntPathValue(r, "id")
 
 	if err != nil {
 		responseHandler.ErrorResponse(

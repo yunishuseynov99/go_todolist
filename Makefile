@@ -7,15 +7,13 @@ env-up:
 	@docker compose --env-file .env up -d todoapp-postgres
 
 env-down:
-	# CHANGE IS HERE: Added --remove-orphans
 	@docker compose --env-file .env down --remove-orphans
 
 env-cleanup:
 	@read -p "This will delete postgres data. Type Y to continue: " ans; \
 	if [ "$$ans" = "Y" ]; then \
-		# CHANGE IS HERE: Added --remove-orphans
 		docker compose --env-file .env down --remove-orphans && \
-		rm -rf out/pgdata && \
+		rm -rf ${PROJECT_ROOT}/out/pgdata && \
 		echo "env cleaned"; \
 	else \
 		echo "cancelled"; \
@@ -32,8 +30,6 @@ migrate-create:
 		-dir /migrations \
 		-seq "$(seq)"
 
-# REMOVED env-port-forward and env-port-close targets
-
 migrate-up:
 	@make migrate-action action=up
 
@@ -45,13 +41,15 @@ migrate-action:
 		echo "Missing variable action. Example: action=up"; \
 		exit 1; \
 	fi; \
+	set -a; . ./.env; set +a; \
 	MSYS_NO_PATHCONV=1 docker compose run --rm todoapp-postgres-migrate \
 		-path /migrations \
-		-database postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@todoapp-postgres:5432/${POSTGRES_DB}?sslmode=disable \
+		-database "postgres://$${POSTGRES_USER}:$${POSTGRES_PASSWORD}@todoapp-postgres:5432/$${POSTGRES_DB}?sslmode=disable" \
 		"$(action)"
 
 todoapp-run:
 	@export LOGGER_FOLDER=${PROJECT_ROOT}/out/logs && \
 	export POSTGRES_HOST=localhost && \
+	set -a && . ./.env && set +a && \
 	go mod tidy && \
-	go run cmd/todoapp/main.go
+	go run ${PROJECT_ROOT}/cmd/todoapp/main.go
