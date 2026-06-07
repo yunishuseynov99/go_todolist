@@ -2,6 +2,7 @@ package core_pgx_pool
 
 import (
 	"errors"
+	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	core_postgres_pool "github.com/yunishuseynov99/go_todolist/internal/core/repository/postgres/pool"
@@ -18,14 +19,33 @@ type pgxRow struct {
 func (r pgxRow) Scan(dest ...any) error {
 	err := r.Row.Scan(dest...)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return core_postgres_pool.ErrNoRows
-		}
-		return err
+		return MapErrors(err)
 	}
 	return nil
 }
 
 type pgxCommandTag struct {
 	pgconn.CommandTag
+}
+
+func MapErrors(err error) error {
+	const (
+		pgxViolatesForeignKeyErrorCode = "23503"
+	)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return core_postgres_pool.ErrNoRows
+	}
+
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		if pgErr.Code == pgxViolatesForeignKeyErrorCode {
+			return fmt.Errorf(
+				"%v: %w",
+				err,
+				core_postgres_pool.ErrViolatesForeignKey,
+			)
+		}
+	}
+	return fmt.Errorf("%v: %w", err, core_postgres_pool.ErrUnknown)
 }
