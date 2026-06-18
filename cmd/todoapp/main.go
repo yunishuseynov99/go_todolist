@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"fmt"
+	statistics_postgres_repository "github.com/yunishuseynov99/go_todolist/internal/features/statistics/repository/postgres"
+	statistics_service "github.com/yunishuseynov99/go_todolist/internal/features/statistics/service"
+	statistics_transport_http "github.com/yunishuseynov99/go_todolist/internal/features/statistics/transport/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -61,6 +64,11 @@ func main() {
 	tasksService := tasks_service.NewTasksService(tasksRepository)
 	tasksTransportHttp := tasks_transport_http.NewTasksHTTPHandler(tasksService)
 
+	newLogger.Debug("initializing feature", zap.String("feature", "statistics"))
+	statisticsRepository := statistics_postgres_repository.NewStatisticsRepository(pool)
+	statisticsService := statistics_service.NewStatisticsService(statisticsRepository)
+	statisticsTransportHttp := statistics_transport_http.NewStatisticsHTTPHandler(statisticsService)
+
 	newLogger.Debug("initializing http server")
 	httpServer := core_http_server.NewHTTPServer(
 		core_http_server.NewConfigMust(),
@@ -74,6 +82,7 @@ func main() {
 	apiVersionRouterV1 := core_http_server.NewAPIVersionRouter(core_http_server.ApiVersion1)
 	apiVersionRouterV1.RegisterRoutes(usersTransportHttp.Routes()...)
 	apiVersionRouterV1.RegisterRoutes(tasksTransportHttp.Routes()...)
+	apiVersionRouterV1.RegisterRoutes(statisticsTransportHttp.Routes()...)
 
 	//apiVersionRouterV2 := core_http_server.NewAPIVersionRouter(core_http_server.ApiVersion2,
 	//	core_http_middleware.Dummy("api v2 middleware"),

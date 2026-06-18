@@ -1,11 +1,84 @@
 package statistics_transport_http
 
-import ("net/http"
-core_logger "github.com/yunishuseynov99/go_todolist/internal/core/logger"
-core_http_response "github.com/yunishuseynov99/go_todolist/internal/core/transport/http/response")
+import (
+	"fmt"
+	"github.com/yunishuseynov99/go_todolist/internal/core/domain"
+	core_logger "github.com/yunishuseynov99/go_todolist/internal/core/logger"
+	core_http_request "github.com/yunishuseynov99/go_todolist/internal/core/transport/http/request"
+	core_http_response "github.com/yunishuseynov99/go_todolist/internal/core/transport/http/response"
+	"net/http"
+	"time"
+)
+
+type GetStatisticsResponse struct {
+	TasksCreated               int
+	TasksCompleted             int
+	TasksCompletedRate         *float64
+	TasksAverageCompletionTime *string
+}
 
 func (h *StatisticsHTTPHandler) GetStatistics(rw http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	logger := core_logger.FromContext(ctx)
 	responseHandler := core_http_response.NewHTTPResponseHandler(logger, rw)
+
+	userID, from, to, err := GetUserIDFromToQueryParams(r)
+	if err != nil {
+		responseHandler.ErrorResponse(
+			err,
+			"failed to get userID/from/to query params",
+		)
+		return
+	}
+
+	statistics, err := h.StatisticsService.GetStatistics(ctx, userID, from, to)
+	if err != nil {
+		responseHandler.ErrorResponse(
+			err,
+			"failed to get statistics",
+		)
+		return
+	}
+
+	response := ToDTOFromDomain(statistics)
+
+	responseHandler.JSONResponse(response, http.StatusOK)
+}
+
+func ToDTOFromDomain(statistics domain.Statistics) GetStatisticsResponse {
+	var avgTime *string
+	if statistics.TasksAverageCompletionTime != nil {
+		duration := statistics.TasksAverageCompletionTime.String()
+		avgTime = &duration
+	}
+	return GetStatisticsResponse{
+		TasksCreated:               statistics.TasksCreated,
+		TasksCompleted:             statistics.TasksCompleted,
+		TasksCompletedRate:         statistics.TasksCompletedRate,
+		TasksAverageCompletionTime: avgTime,
+	}
+}
+
+func GetUserIDFromToQueryParams(r *http.Request) (*int, *time.Time, *time.Time, error) {
+	const (
+		userIDQueryParamKey = "user_id"
+		fromQueryParamKey   = "from"
+		toQueryParamKey     = "to"
+	)
+	userID, err := core_http_request.GetIntQueryParam(r, userIDQueryParamKey)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("get `user_id` query param: %w", err)
+	}
+
+	from, err := core_http_request.GetDateQueryParams(r, fromQueryParamKey)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("get `from` query param: %w", err)
+	}
+
+	to, err := core_http_request.GetDateQueryParams(r, toQueryParamKey)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("get `to` query param: %w", err)
+	}
+
+	return userID, from, to, nil
 }
