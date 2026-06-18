@@ -35,7 +35,7 @@ func (s *StatisticsService) GetStatistics(
 
 func CalcStatistics(tasks []domain.Task) domain.Statistics {
 	if len(tasks) == 0 {
-		return domain.Statistics{}
+		return domain.NewStatistics(0, 0, nil, nil)
 	}
 
 	tasksCreated := len(tasks)
@@ -64,11 +64,6 @@ func CalcStatistics(tasks []domain.Task) domain.Statistics {
 		tasksAverageCompletionTime = &avg
 	}
 
-	return domain.Statistics{
-		TasksCreated:               tasksCreated,
-		TasksCompleted:             tasksCompleted,
-		TasksCompletedRate:         &tasksCompletedRate,
-		TasksAverageCompletionTime: tasksAverageCompletionTime,
-	}
+	return domain.NewStatistics(tasksCreated, tasksCompleted, &tasksCompletedRate, tasksAverageCompletionTime)
 
 }
